@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TaskFlow Inc. Attendance System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+
+        /* General Styles */
+        h1, h2 {
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"], input[type="password"], input[type="date"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        table th {
+            background-color: #f4f4f4;
+        }
+
+        .toggle-link {
+            color: blue;
+            text-decoration: underline;
+            cursor: pointer;
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sign Up Page -->
+    <div id="signup-container" class="container" style="display:none;">
+        <h1>TaskFlow Inc. Sign Up</h1>
+        <div id="signup-error" class="error"></div>
+        <input type="text" id="signup-username" placeholder="Enter Username" required>
+        <input type="password" id="signup-password" placeholder="Enter Password" required>
+        <select id="signup-role">
+            <option value="employee">Employee</option>
+            <option value="admin">Admin</option>
+        </select>
+        <button id="signup-button">Sign Up</button>
+        <div class="toggle-link" id="show-login">Already have an account? Log in here.</div>
+    </div>
+
+    <!-- Login Page -->
+    <div id="login-container" class="container">
+        <h1>TaskFlow Inc. Login</h1>
+        <div id="login-error" class="error"></div>
+        <input type="text" id="username" placeholder="Enter Username" required>
+        <input type="password" id="password" placeholder="Enter Password" required>
+        <button id="login-button">Login</button>
+        <div class="toggle-link" id="show-signup">Don't have an account? Sign up here.</div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" class="container" style="display:none;">
+        <h1>Admin Dashboard</h1>
+        <p>Welcome, Admin. Manage students and attendance below.</p>
+        <input type="date" id="attendance-date" placeholder="Select Date">
+        <input type="text" id="attendance-subject" placeholder="Enter Subject">
+        <button id="set-attendance-info-button">Set Date & Subject</button>
+
+        <h2>Manage Students</h2>
+        <input type="text" id="new-student" placeholder="Enter Student Name">
+        <button id="add-student-button">Add Student</button>
+
+        <form id="attendance-form">
+            <table id="students-table">
+                <tr>
+                    <th>Student Name</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                </tr>
+            </table>
+            <button type="submit">Save Attendance</button>
+        </form>
+
+        <h2>Attendance Records</h2>
+        <div id="attendance-records"></div>
+        <input type="date" id="record-date">
+        <button id="load-attendance-button">Load Attendance for Selected Date</button>
+        <button id="delete-all-records-button">Delete All Records</button>
+    </div>
+
+    <!-- Employee Dashboard -->
+    <div id="employee-dashboard" class="container" style="display:none;">
+        <h1>Employee Dashboard</h1>
+        <p>Welcome, Employee. View your attendance records below.</p>
+        <h2>Your Attendance Records</h2>
+        <div id="employee-attendance-records"></div>
+    </div>
+
+    <script>
+        // Dummy initial users (can sign up new users)
+        let users = [
+            { username: 'admin', password: 'admin123', role: 'admin' },
+            { username: 'employee1', password: 'password1', role: 'employee' },
+            { username: 'employee2', password: 'password2', role: 'employee' }
+        ];
+
+        let students = ['John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Brown'];
+        let currentAttendanceDate = '';
+        let currentAttendanceSubject = '';
+        let attendanceData = [];
+
+        // Show Sign Up Form
+        document.getElementById('show-signup').addEventListener('click', function() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('signup-container').style.display = 'block';
+        });
+
+        // Show Login Form
+        document.getElementById('show-login').addEventListener('click', function() {
+            document.getElementById('signup-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+        });
+
+        // Sign Up Functionality
+        document.getElementById('signup-button').addEventListener('click', function() {
+            const username = document.getElementById('signup-username').value.trim();
+            const password = document.getElementById('signup-password').value.trim();
+            const role = document.getElementById('signup-role').value;
+
+            if (!username || !password) {
+                document.getElementById('signup-error').textContent = 'Username and password are required.';
+                return;
+            }
+
+            const userExists = users.find(u => u.username === username);
+            if (userExists) {
+                document.getElementById('signup-error').textContent = 'Username already taken.';
+                return;
+            }
+
+            const newUser = { username, password, role };
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+
+            alert('Account created successfully! You can now log in.');
+            document.getElementById('signup-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+        });
+
+        // Load users from local storage if available
+        if (localStorage.getItem('users')) {
+            users = JSON.parse(localStorage.getItem('users'));
+        }
+
+        // Login functionality
+        document.getElementById('login-button').addEventListener('click', function() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const user = users.find(u => u.username === username && u.password === password);
+
+            if (user) {
+                document.getElementById('login-container').style.display = 'none';
+                if (user.role === 'admin') {
+                    document.getElementById('admin-dashboard').style.display = 'block';
+                    loadStudents();
+                } else if (user.role === 'employee') {
+                    document.getElementById('employee-dashboard').style.display = 'block';
+                    displayEmployeeAttendanceRecords(username);
+                }
+            } else {
+                document.getElementById('login-error').textContent = 'Invalid username or password';
+            }
+        });
+
+        // Admin Dashboard functionality
+        function loadStudents() {
+            const table = document.getElementById('students-table');
+            table.innerHTML = `
+                <tr>
+                    <th>Student Name</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                </tr>
+            `;
+            students.forEach((student, index) => {
+                const row = document.createElement('tr');
+                const nameCell = document.createElement('td');
+                nameCell.textContent = student;
+                const presentCell = document.createElement('td');
+                const presentInput = document.createElement('input');
+                presentInput.type = 'radio';
+                presentInput.name = `attendance-${index}`;
+                presentInput.value = 'Present';
+                presentCell.appendChild(presentInput);
+                const absentCell = document.createElement('td');
+                const absentInput = document.createElement('input');
+                absentInput.type = 'radio';
+                absentInput.name = `attendance-${index}`;
+                absentInput.value = 'Absent';
+                absentCell.appendChild(absentInput);
+
+                row.appendChild(nameCell);
+                row.appendChild(presentCell);
+                row.appendChild(absentCell);
+                table.appendChild(row);
+            });
+        }
+
+        // Save attendance data
+        document.getElementById('attendance-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const records = [];
+            students.forEach((student, index) => {
+                const present = document.querySelector(`input[name="attendance-${index}"]:checked`);
+                const attendance = present ? present.value : 'Absent';
+                records.push({ name: student, attendance });
+            });
+
+            const attendanceRecord = {
+                date: currentAttendanceDate,
+                subject: currentAttendanceSubject,
+                records
+            };
+
+            attendanceData.push(attendanceRecord);
+            localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+            alert('Attendance data saved.');
+        });
+
+        // Set date and subject for attendance
+        document.getElementById('set-attendance-info-button').addEventListener('click', function() {
+            currentAttendanceDate = document.getElementById('attendance-date').value;
+            currentAttendanceSubject = document.getElementById('attendance-subject').value;
+            if (!currentAttendanceDate || !currentAttendanceSubject) {
+                alert('Please enter both date and subject.');
+                return;
+            }
+            alert('Date and subject set successfully.');
+        });
+
+        // Load attendance records
+        function displayAttendanceRecords() {
+            const recordsDiv = document.getElementById('attendance-records');
+            recordsDiv.innerHTML = '';
+            attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || [];
+            attendanceData.forEach(record => {
+                const dateHeading = document.createElement('h3');
+                dateHeading.textContent = `Date: ${record.date} - Subject: ${record.subject}`;
+                recordsDiv.appendChild(dateHeading);
+
+                const table = document.createElement('table');
+                const headerRow = document.createElement('tr');
+                const nameHeader = document.createElement('th');
+                nameHeader.textContent = 'Student Name';
+                const attendanceHeader = document.createElement('th');
+                attendanceHeader.textContent = 'Attendance';
+
+                headerRow.appendChild(nameHeader);
+                headerRow.appendChild(attendanceHeader);
+                table.appendChild(headerRow);
+
+                record.records.forEach(entry => {
+                    const row = document.createElement('tr');
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = entry.name;
+                    const attendanceCell = document.createElement('td');
+                    attendanceCell.textContent = entry.attendance;
+
+                    row.appendChild(nameCell);
+                    row.appendChild(attendanceCell);
+                    table.appendChild(row);
+                });
+
+                recordsDiv.appendChild(table);
+            });
+        }
+
+        document.getElementById('load-attendance-button').addEventListener('click', function() {
+            displayAttendanceRecords();
+        });
+
+        document.getElementById('delete-all-records-button').addEventListener('click', function() {
+            localStorage.clear();
+            attendanceData = [];
+            displayAttendanceRecords();
+        });
+
+        // Employee Dashboard functionality
+        function displayEmployeeAttendanceRecords(employeeName) {
+            const recordsDiv = document.getElementById('employee-attendance-records');
+            recordsDiv.innerHTML = '';
+            attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || [];
+            attendanceData.forEach(record => {
+                const dateHeading = document.createElement('h3');
+                dateHeading.textContent = `Date: ${record.date} - Subject: ${record.subject}`;
+                recordsDiv.appendChild(dateHeading);
+
+                const table = document.createElement('table');
+                const headerRow = document.createElement('tr');
+                const nameHeader = document.createElement('th');
+                nameHeader.textContent = 'Student Name';
+                const attendanceHeader = document.createElement('th');
+                attendanceHeader.textContent = 'Attendance';
+
+                headerRow.appendChild(nameHeader);
+                headerRow.appendChild(attendanceHeader);
+                table.appendChild(headerRow);
+
+                record.records.forEach(entry => {
+                    if (entry.name === employeeName) {
+                        const row = document.createElement('tr');
+                        const nameCell = document.createElement('td');
+                        nameCell.textContent = entry.name;
+
+                        const attendanceCell = document.createElement('td');
+                        attendanceCell.textContent = entry.attendance;
+
+                        row.appendChild(nameCell);
+                        row.appendChild(attendanceCell);
+                        table.appendChild(row);
+                    }
+                });
+
+                recordsDiv.appendChild(table);
+            });
+        }
+    </script>
+</body>
+</html>
